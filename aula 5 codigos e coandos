@@ -1,0 +1,68 @@
+mkdir flask_mysql
+cd flask_mysql
+mkdir app
+
+from flask import Flask
+import mysql.connector
+import os
+
+app = Flask(__name__)
+
+@app.route('/')
+def hello():
+    db = mysql.connector.connect(
+        user=os.environ.get("DB_USER"),
+        host=os.environ.get("DB_HOST"),
+        password=os.environ.get("DB_PASSWORD"),
+        database=os.environ.get("DB_NAME"),
+    )
+    cursor = db.cursor()
+    cursor.execute("SELECT 'Hello from Flask and MySQL!'")
+    result = cursor.fetchone()
+    cursor.close()
+    db.close()
+    return result[0]
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
+
+flask
+mysql-connector-python
+
+FROM python:3.8-slim
+WORKDIR /app
+COPY . /app
+RUN pip install -r requirements.txt
+CMD ["python", "app.py"]
+
+services:
+  flask_api:
+    build: ./app
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./app:/app
+    environment:
+      - FLASK_ENV=development
+      - DB_HOST=mysql_db
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=root
+      - DB_NAME=flaskdb
+    depends_on:
+      - mysql_db
+
+  mysql_db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: flaskdb
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+volumes:
+  mysql_data:
+
+docker-compose up
